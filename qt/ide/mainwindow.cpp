@@ -81,6 +81,18 @@ void MainWindow::on_cut()
     txt->cut();
 }
 
+//编译
+void MainWindow::on_compile()
+{
+
+}
+
+//运行
+void MainWindow::on_run()
+{
+
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -89,6 +101,7 @@ MainWindow::MainWindow(QWidget *parent)
     QColor bgc;
     bgc.setRgb(255,166,123);
     txt->setTextBackgroundColor(bgc);
+    txt->setStyleSheet("QTextEdit{background-color:#ccc}");
     this->setCentralWidget(txt);
 
     //文件菜单
@@ -139,6 +152,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     //构建菜单
     build = this->menuBar()->addMenu("构建");
+    build_compile = new QAction("编译", this);
+    build->addAction(build_compile);
+
+    build->addSeparator();
+    build_run = new QAction("运行", this);
+    build->addAction(build_run);
+
 
     //帮助菜单
     help = this->menuBar()->addMenu("帮助");

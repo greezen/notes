@@ -25,6 +25,9 @@ private:
     QAction *edit_cut;
 
     QMenu *build;
+    QAction *build_compile;
+    QAction *build_run;
+
     QMenu *help;
     QAction *help_ahout;
 
@@ -37,6 +40,8 @@ private slots:
     void on_copy();
     void on_paste();
     void on_cut();
+    void on_compile();
+    void on_run();
 
 public:
     MainWindow(QWidget *parent = 0);
