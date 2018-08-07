@@ -21,7 +21,9 @@ if ($argv[1]) {
         for ($i = 0; $i < 10; $i++) {
             $res = fwrite($socket_client, "$msg($i)");
             usleep(100000);
-            debug(fread($socket_client, 1024));
+            $buffer = fread($socket_client, 1024);
+            echo $buffer;
+//            debug(fread($socket_client, 1024));
         }
         fclose($socket_client);
     }
