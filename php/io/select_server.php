@@ -11,18 +11,18 @@ class SelectSocketServer
 {
     private static $socket;
     private static $timeout = 60;
-    private static $maxconns = 1;
+    private static $maxconns = 10;
     private static $connections = array();
 
     function __construct($port)
     {
         global $errno, $errstr;
         if ($port < 1024) {
-            die("Port must be a number which bigger than 1024\n");
+            die("端口号必须大于 1024\n");
         }
 
         $socket = socket_create_listen($port);
-        if (!$socket) die("Listen $port failed");
+        if (!$socket) die("监听端口 {$port} 失败");
 
         socket_set_nonblock($socket); // 非阻塞
 
@@ -42,9 +42,9 @@ class SelectSocketServer
                     $i = (int) $newconn;
                     $reject = '';
                     if (count(self::$connections) >= self::$maxconns) {
-                        $reject = "Server full, Try again later.\n";
+                        $reject = "服务器满员了,请稍候再试.\n";
                     }
-                    // 将当前客户端连接放入 socket_select 选择
+                    // 将当前客户端连接放入链接池
                     self::$connections[$i] = $newconn;
                     // 输入的连接资源缓存容器
                     $writefds[$i] = $newconn;
@@ -54,9 +54,9 @@ class SelectSocketServer
                         unset($writefds[$i]);
                         self::close($i);
                     } else {
-                        echo "Client $i come.\n";
+                        echo "客户端id:  {$i} .\n";
                     }
-                    // remove the listening socket from the clients-with-data array
+                    // 从可读连接池中删除
                     $key = array_search($socket, $readfds);
                     unset($readfds[$key]);
                 }
@@ -69,7 +69,7 @@ class SelectSocketServer
                     $line = @socket_read($rfd, 2048, PHP_NORMAL_READ);
                     if ($line === false) {
                         // 读取不到内容，结束连接
-                        echo "Connection closed on socket $i.\n";
+                        echo "连接关闭 $i.\n";
                         self::close($i);
                         continue;
                     }
@@ -81,19 +81,19 @@ class SelectSocketServer
                     // 处理逻辑
                     $line = trim($line);
                     if ($line == "quit") {
-                        echo "Client $i quit.\n";
+                        echo "客户端 $i 退出.\n";
                         self::close($i);
                         break;
                     }
                     if ($line) {
-                        echo "Client $i >>" . $line . "\n";
+                        echo "客户端 $i >>" . $line . "\n";
                     }
                 }
 
                 // 轮循写通道
                 foreach ($writefds as $wfd) {
                     $i = (int) $wfd;
-                    $w = socket_write($wfd, "Welcome Client $i!\n");
+                    $w = socket_write($wfd, "欢迎新童鞋 $i!\n");
                 }
             }
         }

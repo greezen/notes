@@ -8,7 +8,6 @@
 
 function debug ($msg)
 {
-//  echo $msg;
     error_log($msg, 3, '/tmp/socket.log');
 }
 if (isset($argv[1])) {
@@ -22,10 +21,12 @@ if (isset($argv[1])) {
         die("$errstr ($errno)");
     } else {
         $msg = trim($argv[1]);
+        $count = 0;
         for ($i = 0; $i < 10; $i++) {
             $res = fwrite($socket_client, "$msg($i)");
             usleep(100000);
-            echo 'W'; // 打印写的次数
+            $count++;
+            echo "写了{$count}次"; // 打印写的次数
 //          debug(fread($socket_client, 1024)); // 将产生死锁，因为 fread 在阻塞模式下未读到数据时将等待
         }
         fwrite($socket_client, "\r\n"); // 传输结束符

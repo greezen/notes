@@ -1,6 +1,7 @@
 <?php
 /**
- * Created by PhpStorm.
+ * 需要libevent和event扩展支持
+ * @link https://github.com/expressif/pecl-event-libevent.git
  * User: greezen
  * Date: 2018/8/5
  * Time: 15:29
@@ -19,11 +20,11 @@ class EpollSocketServer
         global $errno, $errstr;
 
         if (!extension_loaded('event')) {
-            die("Please install event extension firstly\n");
+            die("请先安装event扩展\n");
         }
 
         if ($port < 1024) {
-            die("Port must be a number which bigger than 1024\n");
+            die("端口号必须大于 1024\n");
         }
 
         $socket_server = stream_socket_server("tcp://0.0.0.0:{$port}", $errno, $errstr);
@@ -36,53 +37,45 @@ class EpollSocketServer
         $event->add();
         self::$base->loop();
 
-//        event_set($event, $socket_server, Event::READ | EVENT::WRITE, array(__CLASS__, 'ev_accept'), $base);
-//        event_base_set($event, $base);
-//        event_add($event);
-//        event_base_loop($base);
-
         self::$connections = array();
         self::$buffers = array();
     }
 
+    // 新请求事件回调
     static function ev_accept($socket, $flag, $base)
     {
         static $id = 0;
 
         $connection = stream_socket_accept($socket);
-        stream_set_blocking($connection, 0);
+        stream_set_blocking($connection, 0);// 非阻塞
 
-        $id++; // increase on each accept
-        $buffer = new EventBufferEvent(self::$base, $connection, EventBufferEvent::READING, array(__CLASS__, 'ev_read'), array(__CLASS__, 'ev_write'), array(__CLASS__, 'ev_error'));
-        $buffer->setTimeouts(1, 1);
+        $id++;
+        $buffer = new EventBufferEvent(self::$base, $connection, EventBufferEvent::READING, array(__CLASS__, 'ev_read'), array(__CLASS__, 'ev_write'), array(__CLASS__, 'ev_event'));
+        $buffer->setTimeouts(1, 1);// 设置读写超时时间
         $buffer->setWatermark(Event::READ, 0, 0xffffff);
-        $buffer->setPriority(10);
-        $buffer->enable(Event::READ | Event::PERSIST |Event::WRITE);
+        // $buffer->setPriority(10); // 设置优先级
+        $buffer->enable(Event::READ | Event::PERSIST |Event::WRITE); // 设置监听的事件
 
-        // we need to save both buffer and connection outside
+        // 保存connection和buffer
         self::$connections[$id] = $connection;
         self::$buffers[$id] = $buffer;
     }
 
-    static function ev_error($buffer, $error, $id)
+    // 事件状态改变回调
+    static function ev_event($buffer, $error, $id)
     {
-//        event_buffer_disable(self::$buffers[$id], EV_READ | EV_WRITE);
-        //$buffer->disable(Event::READ | Event::WRITE);
-        //$buffer->free();
-//        event_buffer_free(self::$buffers[$id]);
-//        var_dump($buffer->read(1024));
         if (isset(self::$connections[$id]) && is_resource(self::$connections[$id])) {
             fclose(self::$connections[$id]);
         }
-        //unset(self::$buffers[$id], self::$connections[$id]);
+        unset(self::$buffers[$id], self::$connections[$id]);
     }
 
+    // 读事件回调
     static function ev_read($buffer, $id)
     {
         static $ct = 0;
         $ct_last = $ct;
         $ct_data = '';
-        //while ($read = event_buffer_read($buffer, 1024)) {
         while ($read = $buffer->read(1024)) {
             $ct += strlen($read);
             $ct_data .= $read;
@@ -92,6 +85,7 @@ class EpollSocketServer
         $buffer->write("Received $ct_size byte data.\r\n");
     }
 
+    // 写事件回调
     static function ev_write($buffer, $id)
     {
         echo "[$id] " . __METHOD__ . "\n";
