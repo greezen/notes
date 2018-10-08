@@ -1,3 +1,4 @@
+//按照指定文件顺序来修改mp3的创建时间
 package main
 
 import (
@@ -7,10 +8,22 @@ import (
 	"log"
 	"os"
 	"path"
+	"strconv"
+	"strings"
 	"time"
 )
 
+// 单位换算
+const (
+	BYTE = 1 << (10 * iota)
+	KILOBYTE
+	MEGABYTE
+	GIGABYTE
+	TERABYTE
+)
+
 func main()  {
+	println("处理中...")
 	dir := "./"
 	files, _ := ioutil.ReadDir(dir)
 	i := 0
@@ -37,11 +50,11 @@ func main()  {
 			log.Fatal(err)
 		}
 
-		fileRead.Close()
-		fileWrite.Close()
-		log.Printf("Copied %d bytes", byteLen)
+		log.Printf("Copied %s", HumanSize(byteLen))
 
 		err = fileWrite.Sync()
+		fileRead.Close()
+		fileWrite.Close()
 		if err != nil{
 			log.Fatal(err)
 		} else {
@@ -49,12 +62,41 @@ func main()  {
 			if err != nil {
 				log.Fatal(err)
 			}
-			os.Rename(newfile, oldfile)
+			err = os.Rename(newfile, oldfile)
 		}
 
 		time.Sleep(2 * time.Second)
 	}
 
-	println("转换成功!")
-	time.Sleep(time.Second * 5)
+	println("转换完成!")
+	time.Sleep(2 * time.Second)
+}
+
+// 格式化字节
+func HumanSize(bytes int64) string {
+	unit := ""
+	value := float64(bytes)
+
+	switch {
+	case bytes >= TERABYTE:
+		unit = "T"
+		value = value / TERABYTE
+	case bytes >= GIGABYTE:
+		unit = "G"
+		value = value / GIGABYTE
+	case bytes >= MEGABYTE:
+		unit = "M"
+		value = value / MEGABYTE
+	case bytes >= KILOBYTE:
+		unit = "K"
+		value = value / KILOBYTE
+	case bytes >= BYTE:
+		unit = "B"
+	case bytes == 0:
+		return "0"
+	}
+
+	result := strconv.FormatFloat(value, 'f', 1, 64)
+	result = strings.TrimSuffix(result, ".0")
+	return result + unit
 }
